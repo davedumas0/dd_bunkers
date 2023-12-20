@@ -2,23 +2,38 @@
 
 
 
---Wait(1000)
 
+
+
+
+-- Initialization of constants and variables
+-- Models and coordinates for various game objects and locations are defined here.
 local bunkerClosedDoorObjectModel = GetHashKey("gr_prop_gr_bunkeddoor_f")
 local bunkerDoorTopModel = GetHashKey("gr_prop_gr_doorpart_f")
 local bunkerDoorBottomModel = GetHashKey("gr_prop_gr_basepart_f")
-
 local bunkerInteriorCoords = vector3(885.982, -3245.716, -98.278)
+local firstRun = false
 
-local isRun_01 = false
+-- these variables are supposed to control the entire script and should be set with a server DB query
+local ownsBunker = true
+local isInCutscene = false
+local securityUpgrade = false
+local bunkerStyle = {"Bunker_Style_A", "Bunker_Style_B", "Bunker_Style_C"}
+local ownsMOC = false
+local gunRangeUpgrade = false
+local officeRoomUpgrade = true
+local gunlockerUppgrade = true
+local officeChair = 1
+local buggyUpgrade = false
+local staffUpgrade = false
+local isBunkerBusinessSetUP = false
 
 
 
-print("Begining of sript local variables loaded")
 
--- Function to load bunker IPLs
+-- Function to load the IPLs for bunkers in the game.
+-- IPLs are used to load interior and exterior building models and props.
 function LoadBunkerIPLs()
-    -- List of IPLs to load, replace 'bunkerIPLName' with actual IPL names
     local bunkerIPLs = {
 
         "gr_case0_bunkerclosed", -- 848.6175, 2996.567, 45.81612
@@ -41,18 +56,16 @@ function LoadBunkerIPLs()
         RequestIpl(ipl) -- This function loads the IPL
         print("ipls loaded "..ipl)
     end
-    
 end
 
-
--- dunxtion for displaying stuff to player via notification system
+-- function for displaying stuff to player via notification system
 function Notify(text)
     SetNotificationTextEntry('STRING')
     AddTextComponentString(text)
     DrawNotification(false, false)
 end
 
-
+-- Coordinates for markers at bunker entrances.
 -- table holding the bunker marker coords
 local bunkerMarkerCoords = {
         { x = -3156.372, y = 1376.653, z = 16.123, active = false},
@@ -70,7 +83,7 @@ local bunkerMarkerCoords = {
     }
     print("marker coords loaded")
 
-
+-- Coordinates for bunker blips on the game map.
 -- table holding the bunker blip coords
     local bunkerBlips = {
         { x = -3180.466, y = 1374.192, z = 19.9597 },
@@ -105,7 +118,8 @@ function CreateBunkerBlips()
     
 end
 
-function RotateTopEntity(top, topRot)
+-- Function to control the rotation and animation of the bunker door top part.
+function RotateTopEntity(top, topRot, bunkerCam_01)
     local soundId = GetSoundId()
     --Wait(100)
     local doorLimitSoundPlayed = false
@@ -121,7 +135,15 @@ function RotateTopEntity(top, topRot)
 	    RequestStreamedScript("Door_Open_Limit", "DLC_GR_Bunker_Door_Sounds")
 	    LoadStream("Door_Open_Limit", "DLC_GR_Bunker_Door_Sounds")
 		PlayStreamFrontend()
-        PlaySoundFrontend(-1, "Door_Open_Limit", "DLC_GR_Bunker_Door_Sounds", 1)  
+        PlaySoundFrontend(-1, "Door_Open_Limit", "DLC_GR_Bunker_Door_Sounds", 1)
+
+        RenderScriptCams(false, true, 1000, true, false)
+        SetCamActive(bunkerCam_01, false)
+
+        local cam2Attributes = getCameraAttributes(2, top)
+        SetupCameraForBunker(bunkerCam_01, cam2Attributes)
+        SetCamActive(bunkerCam_01, true)
+        RenderScriptCams(true, false, 600, true, false)
         end
     end
     --
@@ -137,13 +159,11 @@ function RotateTopEntity(top, topRot)
     end
 end
 
-function SetupCameraForBunker(camera, cameraAttributes)
-    
 
+-- Function to setup camera attributes for different views around the bunker.
+function SetupCameraForBunker(camera, cameraAttributes)
     SetCamParams(camera, cameraAttributes.position.x, cameraAttributes.position.y, cameraAttributes.position.z, cameraAttributes.rotation.x, cameraAttributes.rotation.y, cameraAttributes.rotation.z, cameraAttributes.fov, 0, 1, 1, 2)
     SetGameplayCamRelativeHeading(cameraAttributes.gameplayHeadingOffset)
-    
-
     return camera -- Return the camera object for further manipulation or cleanup
 end
 
@@ -161,76 +181,92 @@ function DrawBunkerEntranceMarkers ()
         end
         -- Check if player is within a specified range (e.g., 100 meters)
         if marker.active then
-            --bunkerDoorOBJ = GetBunkerCloseToPlayer()    
+            
             RequestStreamedScript("Door_Open_Long")
 	        LoadStream("Door_Open_Long", "DLC_GR_Bunker_Door_Sounds")
             DrawMarker(1, marker.x, marker.y, marker.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.55, 1.5, 3.0, 255, 175, 0, 100, false, true, 2, false, nil, nil, false)
             if distance <= 2.0 and  IsControlPressed(0, 38)then
-                --RequestCutscene("BUNK_INT", 491, 8)
-                RequestCutsceneWithPlaybackList("BUNK_INT", 501, 8)
-                print("triggered "..GetBunkerCloseToPlayer())
-                Notify("triggered "..GetBunkerCloseToPlayer())
 
                 local doorBottom = SpawnBunkerDoorBottomPart(GetBunkerCloseToPlayer())
                 Notify("bottom part ID = "..doorBottom)
                 local doorTop = SpawnBunkerDoorTopPart(GetBunkerCloseToPlayer())
+                SetBunkerClosedDoorAttributes(GetBunkerCloseToPlayer(),  0, false)
                 Notify("top part ID = "..doorTop)
                 PlayStreamFrontend()
                 PlaySoundFrontend(-1, "Door_Open_Long", "DLC_GR_Bunker_Door_Sounds", true)
-                openDoor(doorTop, doorBottom)
+                OpenDoor(doorTop, doorBottom)
  
-                 while not HasCutsceneLoaded() do 
-                   Wait(0.0)
-                 end
-                 if HasCutsceneLoaded() then
-                    RegisterEntityForCutscene(GetPlayerPed(-1), "MP_1", 0, GetEntityModel(GetHashKey(GetPlayerPed(-1))), 64)
-                  
-                    StartCutscene(1)
-                 end
+
             end
-        else 
-            --ResetBunkerDoor(GetBunkerCloseToPlayer(), top, doorBottom)    
+        elseif marker.active and distance >= 3.0 then
+            ResetBunkerDoor(GetBunkerCloseToPlayer(), doorTop, doorBottom)
         end
     end
 end
 
+
+
 -- Function to animate the opening of the bunker door
-function openDoor(doorTop, doorBottom)
+function OpenDoor(doorTop, doorBottom)
     if doorTop and doorBottom then
         local topRot = GetEntityRotation(doorTop, 2)
         
         local bunkerCam_01 = CreateCam("DEFAULT_SCRIPTED_CAMERA", false)
-        --local cam1Attributes = getCameraAttributes(1, doorBottom)
-        local cam1Attributes = GetCameraAttributesUsingFiveMNative(bunkerCam_01, doorBottom)
+        local cam1Attributes = getCameraAttributes(1, doorBottom)
+        
 
         SetupCameraForBunker(bunkerCam_01, cam1Attributes)
         SetCamActive(bunkerCam_01, true)
         RenderScriptCams(true, false, 600, true, false)
-    
-        RotateTopEntity(doorTop, topRot)
+        local door = GetBunkerCloseToPlayer()
+        local doorCoords = GetEntityCoords(door)
+            TaskGoStraightToCoord(PlayerPedId(), doorCoords.x, doorCoords.y, doorCoords.z, 1.0, 8000, 88.617, 0.0)
+            RotateTopEntity(doorTop, topRot, bunkerCam_01)
         
-        RenderScriptCams(false, true, 1000, true, false)
-        SetCamActive(bunkerCam_01, true)
 
-        local cam2Attributes = getCameraAttributes(2, doorBottom)
-        SetupCameraForBunker(bunkerCam_01, cam2Attributes)
-        SetCamActive(bunkerCam_01, true)
-        RenderScriptCams(true, false, 600, true, false)
 
-        Wait(8000)
+        
         if IsPedInVehicle(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId(), false), false) then
-            SetEntityCoords(GetVehiclePedIsIn(PlayerPedId(), false), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
-            RenderScriptCams(false, false, 3000, true, false)
-        else
-             --TaskGoStraightToCoord(PlayerPedId(), -3188.031, 1373.702, 16.806, 1.0, 8000, 88.617, 0.0)
-            SetEntityCoords(PlayerPedId(), 894.797, -3244.699, -96.258, true, false, false, false)
-
             
-           DestroyCam(bunkerCam_01, false)
-           RenderScriptCams(false, false, 0, true, true)
+            SetEntityCoords(GetVehiclePedIsIn(PlayerPedId(), false), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+            
+            Wait(8000)
+            DoScreenFadeOut(1000)
+        else
+            --
+            Wait(8000)
+            DoScreenFadeOut(1000)
+            if not firstRun then
+                RequestCutsceneWithPlaybackList("BUNK_INT", 501, 8)
+                while not HasCutsceneLoaded() do
+                   Wait(0.0)
+                end
+
+                SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+            else
+                SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+            end
+            
+            
+
+            if HasCutsceneLoaded() then
+                Wait(4000)
+                SetCamActive(bunkerCam_01, false)
+                RenderScriptCams(false, false, 600, true, false)
+                DestroyCam(bunkerCam_01, true)
+                DoScreenFadeIn(1000)
+                
+                CreateModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), true)
+                RegisterEntityForCutscene(GetPlayerPed(-1), "MP_1", 0, GetEntityModel(GetHashKey(GetPlayerPed(-1))), 64)
+                StartCutscene(0)
+                
+            end
+            
+           
         end
 
         -- Optional: Add any cleanup or additional steps here
+
 
     else
         Notify("Door parts are missing.")
@@ -239,7 +275,7 @@ function openDoor(doorTop, doorBottom)
 end
 
 -- Function to animate the closing of the bunker door and turn off the camera
-function closeDoor(doorTop, doorBottom, bunkerCam)
+function CloseDoor(doorTop, doorBottom, bunkerCam)
     if doorTop and doorBottom then
         local topRot = GetEntityRotation(doorTop, 2)
         
@@ -322,14 +358,12 @@ function SetBunkerClosedDoorAttributes(bunkerClosedDoorOBJ_ID,  alpha, collision
     SetEntityAlpha(bunkerClosedDoorOBJ_ID,  alpha, true)
     FreezeEntityPosition(bunkerClosedDoorOBJ_ID, true)
     SetEntityCollision(bunkerClosedDoorOBJ_ID, collision, true)
-    
-
 end
 
 
 function SpawnBunkerDoorBottomPart(bunkerClosedDoor)
     local ClosedDoorAtributes = GetBunkerClosedDoorAttributes(bunkerClosedDoor)
-    SetBunkerClosedDoorAttributes(bunkerClosedDoor,  0, false)
+    
     local doorBottomPart = CreateObjectNoOffset(bunkerDoorBottomModel, ClosedDoorAtributes.pos.x, ClosedDoorAtributes.pos.y, ClosedDoorAtributes.pos.z, true, true, true)
     
     SetEntityHeading(doorBottomPart, ClosedDoorAtributes.heading)
@@ -341,7 +375,7 @@ end
 
 function SpawnBunkerDoorTopPart(bunkerClosedDoor)
     local ClosedDoorAtributes = GetBunkerClosedDoorAttributes(bunkerClosedDoor)
-    SetBunkerClosedDoorAttributes(bunkerClosedDoor,  0, false)
+    
     Wait(0.1)
     local doorTopPartPosition  = CalculateDoorTopPartPosition(bunkerClosedDoor, -8.68, 0.0, 0.0)
     local doorTopPart = CreateObjectNoOffset(bunkerDoorTopModel, doorTopPartPosition.x, doorTopPartPosition.y, doorTopPartPosition.z, true, true, true)
@@ -355,7 +389,6 @@ function ResetBunkerDoor(closedDoor, top, bottm)
    DeleteEntity(top)
    DeleteEntity(bottm)
    SetBunkerClosedDoorAttributes(closedDoor,  255, true)
-   
 end
 
 
@@ -448,9 +481,8 @@ end
 
 
 function activateSecuritySet()
-    ActivateInteriorEntitySet(258561, "security_upgrade")
-    DeactivateInteriorEntitySet(258561, "standard_security_set")
-    print("activateSecuritySet")
+    ActivateInteriorEntitySet(258561, "standard_security_set")
+    DeactivateInteriorEntitySet(258561, "security_upgrade")
 end
 
 function activateUpgradeSet()    
@@ -473,13 +505,66 @@ function activateUpgradeSet()
     
 end
 
-function activateStyleA()
+function ActivateStyleA()
     ActivateInteriorEntitySet(258561, "Bunker_Style_A")
     DeactivateInteriorEntitySet(258561, "Bunker_Style_B")
-    DeactivateInteriorEntitySet(258561, "Bunker_Style_C")
+    DeactivateInteriorEntitySet(258561, "Bunker_Style_C") 
+end
+function ActivateStyleB()
+    ActivateInteriorEntitySet(258561, "Bunker_Style_B")
+    DeactivateInteriorEntitySet(258561, "Bunker_Style_A")
+    DeactivateInteriorEntitySet(258561, "Bunker_Style_C") 
+end
+
+function Create_GR_crate(crateName, posx, posy, posz)
+    Crate = CreateObject(crateName, posx, posy, posz, false, false, true)
+    SetEntityCoordsNoOffset(Crate, posx, posy, posz, false, false, false)
+    SetEntityHeading(Crate, 180.0)
+    return Crate
     
 end
 
+function CutsceneCheck()
+    if IsCutsceneActive() and IsCutscenePlaying() then
+            if not DoesEntityExist(Crate_01) then
+                RequestModel("gr_prop_gr_crate_mag_01a")
+                RequestModel("gr_prop_gr_crates_sam_01a")
+                RequestModel("gr_prop_gr_crates_weapon_mix_01a")
+                RequestModel("gr_prop_gr_cratespile_01a")
+
+                while not HasModelLoaded("gr_prop_gr_crates_weapon_mix_01a") do
+                    Wait(0.0)
+                end
+                Crate_01 = Create_GR_crate("gr_prop_gr_crates_sam_01a", 915.82, -3218.098, -98.2559)
+                PlaceObjectOnGroundProperly(Crate_01)
+                Crate_02 = Create_GR_crate("gr_prop_gr_crates_weapon_mix_01a", 868.678, -3239.935, -100.584)
+                PlaceObjectOnGroundProperly(Crate_02)
+              
+                
+                Crate_03 = CreateObject("gr_prop_gr_cratespile_01a", 868.678, -3239.935, -100.584, false, false, true)
+                SetEntityCoordsNoOffset(Crate_03, 886.85, -3238.64, -99.28, false, false, false)
+                SetEntityHeading(Crate_03, 180.0)
+
+                --Crate_04 = CreateObject("gr_prop_gr_gunsmithsupl_02a", 868.678, -3239.935, -100.584, false, false, true)
+                --SetEntityCoordsNoOffset(Crate_04, 886.6, -3236.79, -99.28, false, false, false)
+                --SetEntityHeading(Crate_04, 180.0)
+
+                --Crate_05 = CreateObject("gr_prop_gr_gunsmithsupl_01a", 868.678, -3239.935, -100.584, false, false, true)
+                --SetEntityCoordsNoOffset(Crate_05, 886.1, -3237.37, -99.28, false, false, false)
+                --SetEntityHeading(Crate_05, 180.0)
+
+            end
+        end
+        if HasCutsceneFinished() and DoesEntityExist(Crate_01) then
+                DeleteEntity(Crate_01)
+                DeleteEntity(Crate_02)
+                DeleteEntity(Crate_03)
+                --DeleteEntity(Crate_04)
+                --DeleteEntity(Crate_05)
+                RemoveModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), false)
+                
+        end
+end
 
 
 -- Main execution
@@ -488,20 +573,25 @@ Citizen.CreateThread(function()
     LoadBunkerIPLs()
     activateSecuritySet()
     activateUpgradeSet()
-    activateStyleA()
+    ActivateStyleB()
     RefreshInterior(258561)
      
     LoadBunkerModels()
 
 
     while true do
-    
         DrawBunkerEntranceMarkers ()
-        
-
+        CutsceneCheck()
         Wait(0)
        
     end
+    
+end)
+
+
+
+
+
     
 end)
 print("End of sript - "..tostring(GetPlayerPed(PlayerId())))
