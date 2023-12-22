@@ -2,10 +2,6 @@
 
 
 
-
-
-
-
 -- Initialization of constants and variables
 -- Models and coordinates for various game objects and locations are defined here.
 local bunkerClosedDoorObjectModel = GetHashKey("gr_prop_gr_bunkeddoor_f")
@@ -16,15 +12,15 @@ local firstRun = false
 
 -- these variables are supposed to control the entire script and should be set with a server DB query
 local ownsBunker = true
-local isInCutscene = false
+IsInCutscene = false
 local securityUpgrade = false
 local bunkerStyle = {"Bunker_Style_A", "Bunker_Style_B", "Bunker_Style_C"}
 local ownsMOC = false
 local gunRangeUpgrade = false
 local officeRoomUpgrade = true
 local gunlockerUppgrade = true
-local officeChair = 1
-local buggyUpgrade = false
+local officeChair = 2
+local transportUpgrade = false
 local staffUpgrade = false
 local isBunkerBusinessSetUP = false
 
@@ -187,19 +183,19 @@ function DrawBunkerEntranceMarkers ()
             DrawMarker(1, marker.x, marker.y, marker.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.55, 1.5, 3.0, 255, 175, 0, 100, false, true, 2, false, nil, nil, false)
             if distance <= 2.0 and  IsControlPressed(0, 38)then
 
-                local doorBottom = SpawnBunkerDoorBottomPart(GetBunkerCloseToPlayer())
-                Notify("bottom part ID = "..doorBottom)
-                local doorTop = SpawnBunkerDoorTopPart(GetBunkerCloseToPlayer())
+                DoorBottom = SpawnBunkerDoorBottomPart(GetBunkerCloseToPlayer())
+                Notify("bottom part ID = "..DoorBottom)
+                DoorTop = SpawnBunkerDoorTopPart(GetBunkerCloseToPlayer())
                 SetBunkerClosedDoorAttributes(GetBunkerCloseToPlayer(),  0, false)
-                Notify("top part ID = "..doorTop)
+                Notify("top part ID = "..DoorTop)
                 PlayStreamFrontend()
                 PlaySoundFrontend(-1, "Door_Open_Long", "DLC_GR_Bunker_Door_Sounds", true)
-                OpenDoor(doorTop, doorBottom)
+                OpenDoor(DoorTop, DoorBottom)
  
 
             end
         elseif marker.active and distance >= 3.0 then
-            ResetBunkerDoor(GetBunkerCloseToPlayer(), doorTop, doorBottom)
+            ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
         end
     end
 end
@@ -222,34 +218,34 @@ function OpenDoor(doorTop, doorBottom)
         local doorCoords = GetEntityCoords(door)
             TaskGoStraightToCoord(PlayerPedId(), doorCoords.x, doorCoords.y, doorCoords.z, 1.0, 8000, 88.617, 0.0)
             RotateTopEntity(doorTop, topRot, bunkerCam_01)
-        
 
 
-        
+
+
         if IsPedInVehicle(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId(), false), false) then
-            
+            DoScreenFadeOut(1000)
+            Wait(500)
+            ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
             SetEntityCoords(GetVehiclePedIsIn(PlayerPedId(), false), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
-            
-            Wait(8000)
-            DoScreenFadeOut(1000)
         else
-            --
-            Wait(8000)
             DoScreenFadeOut(1000)
+            Wait(500)
             if not firstRun then
                 RequestCutsceneWithPlaybackList("BUNK_INT", 501, 8)
                 while not HasCutsceneLoaded() do
                    Wait(0.0)
                 end
-
+                ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
                 SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+                
             else
+                ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
                 SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+                
             end
-            
-            
 
-            if HasCutsceneLoaded() then
+        
+            if HasCutsceneLoaded() and not firstRun then
                 Wait(4000)
                 SetCamActive(bunkerCam_01, false)
                 RenderScriptCams(false, false, 600, true, false)
@@ -259,19 +255,21 @@ function OpenDoor(doorTop, doorBottom)
                 CreateModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), true)
                 RegisterEntityForCutscene(GetPlayerPed(-1), "MP_1", 0, GetEntityModel(GetHashKey(GetPlayerPed(-1))), 64)
                 StartCutscene(0)
-                
+                IsInCutscene = true
+                firstRun = true
+            elseif firstRun then
+                Wait(4000)
+                SetCamActive(bunkerCam_01, false)
+                RenderScriptCams(false, false, 600, true, false)
+                DestroyCam(bunkerCam_01, true)
+                DoScreenFadeIn(1000)
             end
-            
-           
+
         end
-
-        -- Optional: Add any cleanup or additional steps here
-
 
     else
         Notify("Door parts are missing.")
     end
-    
 end
 
 -- Function to animate the closing of the bunker door and turn off the camera
@@ -485,17 +483,21 @@ function activateSecuritySet()
     DeactivateInteriorEntitySet(258561, "security_upgrade")
 end
 
-function activateUpgradeSet()    
-    local officeChar = "bkr_prop_clubhouse_offchair_01a"
-    RequestModel(officeChar)
-    while not HasModelLoaded(officeChar) do
+function activateUpgradeSet()
+    if officeChair ==1 then
+        OfficeChar = "bkr_prop_clubhouse_offchair_01a"
+    elseif officeChair ==2 then
+        OfficeChar = "bkr_prop_clubhouse_offchair_01a"
+    end
+    RequestModel(OfficeChar)
+    while not HasModelLoaded(OfficeChar) do
         Wait(0)
     end
     ActivateInteriorEntitySet(258561, "upgrade_bunker_set") --new machines
     DeactivateInteriorEntitySet(258561, "standard_bunker_set") --used machines
     ActivateInteriorEntitySet(258561, "Gun_schematic_set")
     ActivateInteriorEntitySet(258561, "Office_Upgrade_set")-- adds room with bed
- 
+     
     local officeChairOBJ = CreateObjectNoOffset(GetHashKey(officeChar), 908.370, -3206.994, -97.187, true, true, false)
     
     PlaceObjectOnGroundProperly(officeChairOBJ)
@@ -525,40 +527,47 @@ function Create_GR_crate(crateName, posx, posy, posz)
 end
 
 function CutsceneCheck()
-    if IsCutsceneActive() and IsCutscenePlaying() then
+    if IsCutsceneActive() and IsCutscenePlaying() and IsInCutscene then
+
             if not DoesEntityExist(Crate_01) then
-                RequestModel("gr_prop_gr_crate_mag_01a")
-                RequestModel("gr_prop_gr_crates_sam_01a")
-                RequestModel("gr_prop_gr_crates_weapon_mix_01a")
+                RequestModel("gr_prop_gr_crates_rifles_03a")
+                RequestModel("gr_prop_gr_crates_rifles_01a")
+
+                RequestModel("gr_prop_gr_crates_rifles_04a")
+                RequestModel("gr_prop_gr_crates_pistols_01a")
+                RequestModel("gr_prop_gr_crates_weapon_mix_01b")
                 RequestModel("gr_prop_gr_cratespile_01a")
 
-                while not HasModelLoaded("gr_prop_gr_crates_weapon_mix_01a") do
+                while not HasModelLoaded("gr_prop_gr_crates_rifles_03a") do
                     Wait(0.0)
                 end
-                Crate_01 = Create_GR_crate("gr_prop_gr_crates_sam_01a", 915.82, -3218.098, -98.2559)
+                Crate_01 = Create_GR_crate("gr_prop_gr_crates_rifles_03a", 918.0762, -3233.553, -99.29)
                 PlaceObjectOnGroundProperly(Crate_01)
-                Crate_02 = Create_GR_crate("gr_prop_gr_crates_weapon_mix_01a", 868.678, -3239.935, -100.584)
+                SetEntityHeading(Crate_01, 180.0)
+
+                Crate_02 = Create_GR_crate("gr_prop_gr_crates_rifles_01a", 917.455, -3231.86, -99.29)
                 PlaceObjectOnGroundProperly(Crate_02)
-              
-                
-                Crate_03 = CreateObject("gr_prop_gr_cratespile_01a", 868.678, -3239.935, -100.584, false, false, true)
-                SetEntityCoordsNoOffset(Crate_03, 886.85, -3238.64, -99.28, false, false, false)
-                SetEntityHeading(Crate_03, 180.0)
+                SetEntityHeading(Crate_04, 180.0)
 
-                --Crate_04 = CreateObject("gr_prop_gr_gunsmithsupl_02a", 868.678, -3239.935, -100.584, false, false, true)
-                --SetEntityCoordsNoOffset(Crate_04, 886.6, -3236.79, -99.28, false, false, false)
-                --SetEntityHeading(Crate_04, 180.0)
+                Crate_03 = CreateObject("gr_prop_gr_crates_rifles_01a", 917.8137, -3221.559, -99.29, false, false, true)
+                PlaceObjectOnGroundProperly(Crate_03)
+                SetEntityHeading(Crate_04, 180.0)
 
-                --Crate_05 = CreateObject("gr_prop_gr_gunsmithsupl_01a", 868.678, -3239.935, -100.584, false, false, true)
-                --SetEntityCoordsNoOffset(Crate_05, 886.1, -3237.37, -99.28, false, false, false)
-                --SetEntityHeading(Crate_05, 180.0)
+                Crate_04 = CreateObject("gr_prop_gr_crates_rifles_04a", 916.6675, -3228.079, -99.29, false, false, true)
+                SetEntityHeading(Crate_04, 180.0)
+                PlaceObjectOnGroundProperly(Crate_04)
+
+                Crate_05 = CreateObject("gr_prop_gr_crates_pistols_01a", 916.424, -3222.085, -99.29, false, false, true)
+                SetEntityHeading(Crate_05, 180.0)
+                PlaceObjectOnGroundProperly(Crate_05)
 
             end
         end
-        if HasCutsceneFinished() and DoesEntityExist(Crate_01) then
-                DeleteEntity(Crate_01)
-                DeleteEntity(Crate_02)
-                DeleteEntity(Crate_03)
+        if HasCutsceneFinished() and DoesEntityExist(Crate_01) and IsInCutscene then
+                IsInCutscene = false
+                --DeleteEntity(Crate_01)
+                --DeleteEntity(Crate_02)
+                --DeleteEntity(Crate_03)
                 --DeleteEntity(Crate_04)
                 --DeleteEntity(Crate_05)
                 RemoveModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), false)
@@ -591,7 +600,3 @@ end)
 
 
 
-
-    
-end)
-print("End of sript - "..tostring(GetPlayerPed(PlayerId())))
