@@ -1,7 +1,7 @@
 # GTA 5 Bunker Resource
 
 ## Overview
-This repository contains scripts for a custom GTA 5 bunker resource, designed for use with FiveM servers. It includes functionalities for loading bunker interiors, creating custom menus, and managing various game objects and locations.
+This repository contains scripts for a custom GTA 5 bunker resource, designed for use with FiveM servers. It includes functionalities for loading bunker interiors,  and managing various game objects and locations.
 
 ## Files
 1. **bunker_load.lua**: Handles the loading of bunker interiors and associated objects. It includes models, coordinates, and initializations for bunker-related elements in the game.
