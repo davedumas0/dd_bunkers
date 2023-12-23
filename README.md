@@ -7,8 +7,9 @@ This repository contains scripts for a custom GTA 5 bunker resource, designed fo
 1. **bunker_load.lua**: Handles the loading of bunker interiors and associated objects. It includes models, coordinates, and initializations for bunker-related elements in the game.
 
 2. **f7Menu.lua**: Implements a custom menu interface within the game. It features debug windows, interface customization options, and key bindings specific to the FiveM mod.
+     opens with the "m" key not f7
 
-3. **fxmanifest.lua**: The manifest file for this resource. It specifies metadata like the version, author, and a brief description. It also links the client scripts that are part of this resource.
+4. **fxmanifest.lua**: The manifest file for this resource. It specifies metadata like the version, author, and a brief description. It also links the client scripts that are part of this resource.
 
 ## Installation
 To install this resource:
