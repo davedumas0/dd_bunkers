@@ -19,7 +19,7 @@ To install this resource:
 
 ## Usage
 - **Bunker Interiors**: Can be loaded and customized using `bunker_load.lua`.
-- **Custom Menu**: Accessible in-game, providing various debug and customization options.**Custom Menu** --this is just to jelp me develop script and will not be in final product--
+- **Custom Menu**: Accessible in-game, providing various debug and customization options.--**Custom Menu** --this is just to help me develop script and will not be in final product--
 
 ## Contributing
 Contributions, bug reports, and feature requests are welcome. Please submit them through the issue tracker or pull requests.
