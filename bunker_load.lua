@@ -8,10 +8,12 @@ local bunkerClosedDoorObjectModel = GetHashKey("gr_prop_gr_bunkeddoor_f")
 local bunkerDoorTopModel = GetHashKey("gr_prop_gr_doorpart_f")
 local bunkerDoorBottomModel = GetHashKey("gr_prop_gr_basepart_f")
 local bunkerInteriorCoords = vector3(885.982, -3245.716, -98.278)
-local firstRun = false
+
 
 -- these variables are supposed to control the entire script and should be set with a server DB query
 local ownsBunker = true
+local ownedBunkerNumber = 1
+local firstRun = false
 IsInCutscene = false
 local securityUpgrade = false
 local bunkerStyle = {"Bunker_Style_A", "Bunker_Style_B", "Bunker_Style_C"}
@@ -23,6 +25,9 @@ local officeChair = 2
 local transportUpgrade = false
 local staffUpgrade = false
 local isBunkerBusinessSetUP = false
+local bunkerBusinessLaptop = "gr_bunker_laptop_01a"
+local disruptionLogisticsScreen = "Prop_Screen_GR_Disruption"
+local disruptScreen = false
 
 
 
@@ -50,8 +55,9 @@ function LoadBunkerIPLs()
     -- Load each IPL
     for i, ipl in pairs(bunkerIPLs) do
         RequestIpl(ipl) -- This function loads the IPL
-        print("ipls loaded "..ipl)
+        
     end
+    print("ipls loaded")
 end
 
 -- function for displaying stuff to player via notification system
@@ -109,17 +115,18 @@ function CreateBunkerBlips()
         BeginTextCommandSetBlipName("STRING")
         AddTextComponentString("Bunker") -- Name of the blip
         EndTextCommandSetBlipName(blip)
-        print("create bunker blip "..i)
+        
     end
-    
+    print("create bunker blips")
 end
 
 -- Function to control the rotation and animation of the bunker door top part.
 function RotateTopEntity(top, topRot, bunkerCam_01)
-    local soundId = GetSoundId()
-    --Wait(100)
+    
+    
     local doorLimitSoundPlayed = false
---
+          print("Start Door rotation")
+          Notify("Start Door rotation")
     for i = 1, 20 do
         Wait(120)
         SetEntityRotation(top, topRot.x, topRot.y - i, topRot.z, 2, true)
@@ -198,6 +205,10 @@ function DrawBunkerEntranceMarkers ()
             ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
         end
     end
+    local distanceToExitDoor = Vdist(playerCoords.x, playerCoords.y, playerCoords.z, 896.376, -3245.798, -98.243)
+    if distanceToExitDoor <1.0 and IsControlPressed(0, 38) then
+        SetEntityCoords(PlayerPedId(), -3151.440, 1377.317, 17.391, true, false, false, false)
+    end
 end
 
 
@@ -208,6 +219,8 @@ function OpenDoor(doorTop, doorBottom)
         local topRot = GetEntityRotation(doorTop, 2)
         
         local bunkerCam_01 = CreateCam("DEFAULT_SCRIPTED_CAMERA", false)
+        print("create camera")
+        Notify("create camera")
         local cam1Attributes = getCameraAttributes(1, doorBottom)
         
 
@@ -216,53 +229,52 @@ function OpenDoor(doorTop, doorBottom)
         RenderScriptCams(true, false, 600, true, false)
         local door = GetBunkerCloseToPlayer()
         local doorCoords = GetEntityCoords(door)
-            TaskGoStraightToCoord(PlayerPedId(), doorCoords.x, doorCoords.y, doorCoords.z, 1.0, 8000, 88.617, 0.0)
             RotateTopEntity(doorTop, topRot, bunkerCam_01)
-
-
-
-
         if IsPedInVehicle(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId(), false), false) then
-            DoScreenFadeOut(1000)
+            
             Wait(500)
             ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
             SetEntityCoords(GetVehiclePedIsIn(PlayerPedId(), false), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
         else
-            DoScreenFadeOut(1000)
+            TaskGoStraightToCoord(PlayerPedId(), doorCoords.x, doorCoords.y, doorCoords.z, 1.0, 8000, 88.617, 0.0)
             Wait(500)
             if not firstRun then
                 RequestCutsceneWithPlaybackList("BUNK_INT", 501, 8)
                 while not HasCutsceneLoaded() do
                    Wait(0.0)
                 end
+                DoScreenFadeOut(1500)
+                Wait(1500)
                 ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
                 SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
                 
             else
+                DoScreenFadeOut(1500)
+                Wait(1500)
                 ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
+                SetCamActive(bunkerCam_01, false)
+                RenderScriptCams(false, false, 600, true, false)
+                DestroyCam(bunkerCam_01, true)
                 SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
-                
+                SetUpDisruptionLogisticsLaptop()
+                DoScreenFadeIn(1500)
             end
 
         
             if HasCutsceneLoaded() and not firstRun then
-                Wait(4000)
+                Wait(3500)
                 SetCamActive(bunkerCam_01, false)
                 RenderScriptCams(false, false, 600, true, false)
                 DestroyCam(bunkerCam_01, true)
-                DoScreenFadeIn(1000)
+                
                 
                 CreateModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), true)
-                RegisterEntityForCutscene(GetPlayerPed(-1), "MP_1", 0, GetEntityModel(GetHashKey(GetPlayerPed(-1))), 64)
+                RegisterEntityForCutscene(GetPlayerPed(-1), "MP_1", 0, GetEntityModel(GetPlayerPed(-1)), 64)
+                Wait(2000)
+                DoScreenFadeIn(1000)
                 StartCutscene(0)
                 IsInCutscene = true
                 firstRun = true
-            elseif firstRun then
-                Wait(4000)
-                SetCamActive(bunkerCam_01, false)
-                RenderScriptCams(false, false, 600, true, false)
-                DestroyCam(bunkerCam_01, true)
-                DoScreenFadeIn(1000)
             end
 
         end
@@ -487,7 +499,7 @@ function activateUpgradeSet()
     if officeChair ==1 then
         OfficeChar = "bkr_prop_clubhouse_offchair_01a"
     elseif officeChair ==2 then
-        OfficeChar = "bkr_prop_clubhouse_offchair_01a"
+        OfficeChar = "sm_prop_smug_offchair_01a"
     end
     RequestModel(OfficeChar)
     while not HasModelLoaded(OfficeChar) do
@@ -497,9 +509,9 @@ function activateUpgradeSet()
     DeactivateInteriorEntitySet(258561, "standard_bunker_set") --used machines
     ActivateInteriorEntitySet(258561, "Gun_schematic_set")
     ActivateInteriorEntitySet(258561, "Office_Upgrade_set")-- adds room with bed
-     
-    local officeChairOBJ = CreateObjectNoOffset(GetHashKey(officeChar), 908.370, -3206.994, -97.187, true, true, false)
-    
+    RefreshInterior(258561)
+    local officeChairOBJ = CreateObjectNoOffset(GetHashKey(OfficeChar), 908.370, -3206.994, -96.187, true, true, false)
+    ForceRoomForEntity(officeChairOBJ, 258561, -995755633)
     PlaceObjectOnGroundProperly(officeChairOBJ)
     Wait(0.1)
     FreezeEntityPosition(officeChairOBJ, true)
@@ -508,14 +520,19 @@ function activateUpgradeSet()
 end
 
 function ActivateStyleA()
-    ActivateInteriorEntitySet(258561, "Bunker_Style_A")
-    DeactivateInteriorEntitySet(258561, "Bunker_Style_B")
-    DeactivateInteriorEntitySet(258561, "Bunker_Style_C") 
+    ActivateInteriorEntitySet(258561, bunkerStyle[1])
+    DeactivateInteriorEntitySet(258561, bunkerStyle[2])
+    DeactivateInteriorEntitySet(258561, bunkerStyle[3]) 
 end
 function ActivateStyleB()
-    ActivateInteriorEntitySet(258561, "Bunker_Style_B")
-    DeactivateInteriorEntitySet(258561, "Bunker_Style_A")
-    DeactivateInteriorEntitySet(258561, "Bunker_Style_C") 
+    ActivateInteriorEntitySet(258561, bunkerStyle[2])
+    DeactivateInteriorEntitySet(258561, bunkerStyle[1])
+    DeactivateInteriorEntitySet(258561, bunkerStyle[3]) 
+end
+function ActivateStyleC()
+    ActivateInteriorEntitySet(258561, bunkerStyle[3])
+    DeactivateInteriorEntitySet(258561, bunkerStyle[1])
+    DeactivateInteriorEntitySet(258561, bunkerStyle[2]) 
 end
 
 function Create_GR_crate(crateName, posx, posy, posz)
@@ -549,30 +566,82 @@ function CutsceneCheck()
                 PlaceObjectOnGroundProperly(Crate_02)
                 SetEntityHeading(Crate_04, 180.0)
 
-                Crate_03 = CreateObject("gr_prop_gr_crates_rifles_01a", 917.8137, -3221.559, -99.29, false, false, true)
-                PlaceObjectOnGroundProperly(Crate_03)
-                SetEntityHeading(Crate_04, 180.0)
+                --Crate_03 = CreateObject("gr_prop_gr_crates_rifles_01a", 917.8137, -3221.559, -99.29, false, false, true)
+                --PlaceObjectOnGroundProperly(Crate_03)
+                --SetEntityHeading(Crate_04, 180.0)
 
                 Crate_04 = CreateObject("gr_prop_gr_crates_rifles_04a", 916.6675, -3228.079, -99.29, false, false, true)
                 SetEntityHeading(Crate_04, 180.0)
                 PlaceObjectOnGroundProperly(Crate_04)
 
-                Crate_05 = CreateObject("gr_prop_gr_crates_pistols_01a", 916.424, -3222.085, -99.29, false, false, true)
-                SetEntityHeading(Crate_05, 180.0)
-                PlaceObjectOnGroundProperly(Crate_05)
+                --Crate_05 = CreateObject("gr_prop_gr_crates_pistols_01a", 916.424, -3222.085, -99.29, false, false, true)
+                --SetEntityHeading(Crate_05, 180.0)
+                --PlaceObjectOnGroundProperly(Crate_05)
 
             end
         end
         if HasCutsceneFinished() and DoesEntityExist(Crate_01) and IsInCutscene then
                 IsInCutscene = false
-                --DeleteEntity(Crate_01)
-                --DeleteEntity(Crate_02)
+                DeleteEntity(Crate_01)
+                DeleteEntity(Crate_02)
                 --DeleteEntity(Crate_03)
-                --DeleteEntity(Crate_04)
+                DeleteEntity(Crate_04)
                 --DeleteEntity(Crate_05)
                 RemoveModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), false)
-                
+                SetUpDisruptionLogisticsLaptop()
         end
+end
+
+-- Sets up the display for the laptop inside the bunker.
+function SetUpDisruptionLogisticsLaptop()
+    -- Retrieve the player's character.
+    local playerPed = GetPlayerPed(PlayerId())
+    
+    -- Check if the player is inside the bunker and if the laptop screen is not already set.
+    if GetInteriorFromEntity(playerPed) == 258561 and disruptScreen == false then
+        -- Request the texture for the laptop screen.
+        RequestStreamedTextureDict("Prop_Screen_GR_Disruption", 0)
+        
+        -- If the texture is loaded, proceed with setting up the screen.
+        if HasStreamedTextureDictLoaded("Prop_Screen_GR_Disruption") then
+            -- Register a render target (screen) if it's not already registered.
+            if not IsNamedRendertargetRegistered("gr_bunker_laptop_01a") then
+                RegisterNamedRendertarget("gr_bunker_laptop_01a", 0)
+            end
+            -- Link the laptop's screen to the render target if not already linked.
+            if not IsNamedRendertargetLinked(-424277613) then
+                LinkNamedRendertarget(-424277613)
+                disruptScreen = true -- Indicate that the laptop screen is now set up.
+            end
+        end
+    end
+
+    -- Print whether the render target is linked (for debugging).
+    print(tostring(IsNamedRendertargetLinked(-424277613)))
+end
+
+-- Draws the Disruption Logistics screen on the laptop in the bunker.
+function DrawDisruptLogistics()
+    -- Retrieve the player's character.
+    local playerPed = GetPlayerPed(PlayerId())
+    
+    -- Check if the player is inside the bunker and if the laptop screen is set up.
+    if GetInteriorFromEntity(playerPed) == 258561 and disruptScreen == true then
+        -- Get the render target ID for the laptop.
+        local bunkerLaptopRenderTargetId = GetNamedRendertargetRenderId("gr_bunker_laptop_01a")
+        
+        -- Set the current render target to the laptop screen for drawing.
+        SetTextRenderId(bunkerLaptopRenderTargetId)
+        -- Set up the position and order for drawing the screen.
+        SetScreenDrawPosition(73, 73)
+        SetScriptGfxDrawOrder(4)
+        SetScriptGfxDrawBehindPausemenu(true)
+        -- Draw the Disruption Logistics screen on the laptop.
+        DrawSprite("Prop_Screen_GR_Disruption", "Prop_Screen_GR_Disruption", 0.5, 0.5, 1.0, 1.0, 0.0, 255, 255, 255, 255)
+        -- Reset the render target to default after drawing.
+        ScreenDrawPositionEnd()
+        SetTextRenderId(GetDefaultScriptRendertargetRenderId())
+    end
 end
 
 
@@ -580,23 +649,21 @@ end
 Citizen.CreateThread(function()
     CreateBunkerBlips()
     LoadBunkerIPLs()
-    activateSecuritySet()
+    
     activateUpgradeSet()
     ActivateStyleB()
-    RefreshInterior(258561)
+    activateSecuritySet()
      
     LoadBunkerModels()
 
-
+     
     while true do
         DrawBunkerEntranceMarkers ()
         CutsceneCheck()
-        Wait(0)
-       
+        --SetUpDisruptionLogisticsLaptop ()
+        DrawDisruptLogistics()
+        Wait(0.0)
+
     end
     
 end)
-
-
-
-
