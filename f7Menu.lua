@@ -172,7 +172,7 @@ function SpawnWeaponPickup()
 
     -- create the weapon pickup
     -- replace "weapon_pistol" and 10 with the weapon hash and ammo count you want
-    local pickup = CreatePickupRotate(GetHashKey("PICKUP_WEAPON_PISTOL"), pickupPos.x, pickupPos.y, pickupPos.z, 0, 0, 0, 2, 50, 2, true, 0x3656C8C1)
+    local pickup = CreatePickupRotate(joaat("PICKUP_WEAPON_PISTOL"), pickupPos.x, pickupPos.y, pickupPos.z, 0, 0, 0, 2, 50, 2, true, 0x3656C8C1)
     Notify("Weapon pickup spawned!")
 end
 
@@ -181,7 +181,7 @@ function SpawnMoneyPickup()
     local playerPed = PlayerPedId()
     local coords = GetEntityCoords(playerPed)
     local pickupPos = coords + GetEntityForwardVector(playerPed) * 2.0 -- calculate the position in front of the player
-    local model = GetHashKey("prop_anim_cash_note")
+    local model = joaat("prop_anim_cash_note")
     RequestModel(model)
     while not HasModelLoaded(model) do
         Wait(0)
@@ -197,7 +197,7 @@ function SpawnVehicle(vehicleModel)
     local coords = GetEntityCoords(playerPed)
     local spawnPos = coords + GetEntityForwardVector(playerPed) * 5.0 -- calculate the position in front of the player
 
-    local vehicleHash = GetHashKey(vehicleModel)
+    local vehicleHash = joaat(vehicleModel)
     RequestModel(vehicleHash)
     while not HasModelLoaded(vehicleHash) do
         Wait(1)
@@ -218,7 +218,7 @@ function SpawnObject()
     coords = GetEntityCoords(playerPed)
     spawnPos = coords + GetEntityForwardVector(playerPed) * 2.0 -- Adjust the offset as needed
     heading = GetEntityHeading(playerPed)
-    local objectToSpawn = GetHashKey("xm_prop_x17_avengerchair_02")
+    local objectToSpawn = joaat("xm_prop_x17_avengerchair_02")
     RequestModel(objectToSpawn)
   
 
@@ -237,13 +237,13 @@ end
 function DeletObject()
     local playerPed = PlayerPedId()
     local playerCoords = GetEntityCoords(playerPed)
-    DD = DoesObjectOfTypeExistAtCoords(playerCoords.x, playerCoords.y, playerCoords.z, 25, GetHashKey("gr_prop_gr_rsply_crate04b"), true)
+    DD = DoesObjectOfTypeExistAtCoords(playerCoords.x, playerCoords.y, playerCoords.z, 25, joaat("gr_prop_gr_rsply_crate04b"), true)
 
     DeleteEntity(SpawnedObject)
 
 
     if DD then 
-       local entity_11 =  GetClosestObjectOfType(playerCoords.x, playerCoords.y, playerCoords.z, 25.0, GetHashKey("gr_prop_gr_rsply_crate04b") , false, true, true)
+       local entity_11 =  GetClosestObjectOfType(playerCoords.x, playerCoords.y, playerCoords.z, 25.0, joaat("gr_prop_gr_rsply_crate04b") , false, true, true)
        DeleteEntity(entity_11)
     end
 

@@ -4,9 +4,9 @@
 
 -- Initialization of constants and variables
 -- Models and coordinates for various game objects and locations are defined here.
-local bunkerClosedDoorObjectModel = GetHashKey("gr_prop_gr_bunkeddoor_f")
-local bunkerDoorTopModel = GetHashKey("gr_prop_gr_doorpart_f")
-local bunkerDoorBottomModel = GetHashKey("gr_prop_gr_basepart_f")
+local bunkerClosedDoorObjectModel = joaat("gr_prop_gr_bunkeddoor_f")
+local bunkerDoorTopModel = joaat("gr_prop_gr_doorpart_f")
+local bunkerDoorBottomModel = joaat("gr_prop_gr_basepart_f")
 local bunkerInteriorCoords = vector3(885.982, -3245.716, -98.278)
 
 
@@ -170,12 +170,13 @@ function SetupCameraForBunker(camera, cameraAttributes)
     return camera -- Return the camera object for further manipulation or cleanup
 end
 
+local exitDoor = vector3(896.376, -3245.798, -98.243)
 function DrawBunkerEntranceMarkers ()
     local renderdistance = 5
     local playerPed = GetPlayerPed(PlayerId())
     local playerCoords = GetEntityCoords(playerPed)
     for _, marker in pairs(bunkerMarkerCoords) do
-        local distance = Vdist(playerCoords.x, playerCoords.y, playerCoords.z, marker.x, marker.y, marker.z)
+        local distance = #(playerCoords - marker)
         if distance <= renderdistance and marker.active == false then
             marker.active = true
         elseif not distance == nil or distance >= renderdistance and marker.active == true then
@@ -205,9 +206,9 @@ function DrawBunkerEntranceMarkers ()
             ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
         end
     end
-    local distanceToExitDoor = Vdist(playerCoords.x, playerCoords.y, playerCoords.z, 896.376, -3245.798, -98.243)
+    local distanceToExitDoor = #(playerCoords - exitDoor)
     if distanceToExitDoor <1.0 and IsControlPressed(0, 38) then
-        SetEntityCoords(PlayerPedId(), -3151.440, 1377.317, 17.391, true, false, false, false)
+        SetEntityCoords(PlayerPedId(), exitDoor.x, exitDoor.y, exitDoor.z, true, false, false, false)
     end
 end
 
@@ -230,13 +231,14 @@ function OpenDoor(doorTop, doorBottom)
         local door = GetBunkerCloseToPlayer()
         local doorCoords = GetEntityCoords(door)
             RotateTopEntity(doorTop, topRot, bunkerCam_01)
-        if IsPedInVehicle(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId(), false), false) then
+        local playerPed = PlayerPedId()
+        if IsPedInVehicle(playerPed, GetVehiclePedIsIn(playerPed, false), false) then
             
             Wait(500)
             ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
-            SetEntityCoords(GetVehiclePedIsIn(PlayerPedId(), false), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+            SetEntityCoords(GetVehiclePedIsIn(playerPed, false), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
         else
-            TaskGoStraightToCoord(PlayerPedId(), doorCoords.x, doorCoords.y, doorCoords.z, 1.0, 8000, 88.617, 0.0)
+            TaskGoStraightToCoord(playerPed, doorCoords.x, doorCoords.y, doorCoords.z, 1.0, 8000, 88.617, 0.0)
             Wait(500)
             if not firstRun then
                 RequestCutsceneWithPlaybackList("BUNK_INT", 501, 8)
@@ -246,7 +248,7 @@ function OpenDoor(doorTop, doorBottom)
                 DoScreenFadeOut(1500)
                 Wait(1500)
                 ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
-                SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+                SetEntityCoords(playerPed, bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
                 
             else
                 DoScreenFadeOut(1500)
@@ -255,7 +257,7 @@ function OpenDoor(doorTop, doorBottom)
                 SetCamActive(bunkerCam_01, false)
                 RenderScriptCams(false, false, 600, true, false)
                 DestroyCam(bunkerCam_01, true)
-                SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+                SetEntityCoords(playerPed, bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
                 SetUpDisruptionLogisticsLaptop()
                 DoScreenFadeIn(1500)
             end
@@ -268,8 +270,8 @@ function OpenDoor(doorTop, doorBottom)
                 DestroyCam(bunkerCam_01, true)
                 
                 
-                CreateModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), true)
-                RegisterEntityForCutscene(GetPlayerPed(-1), "MP_1", 0, GetEntityModel(GetPlayerPed(-1)), 64)
+                CreateModelHide(897.0294, -3248.4165, -99.29, 5.0, joaat("gr_prop_gr_tunnel_gate"), true)
+                RegisterEntityForCutscene(playerPed, "MP_1", 0, GetEntityModel(playerPed), 64)
                 Wait(2000)
                 DoScreenFadeIn(1000)
                 StartCutscene(0)
@@ -319,12 +321,12 @@ end
 
 
 function LoadBunkerModels()
-    RequestModel(GetHashKey("gr_prop_gr_basepart_f"))
-    RequestModel(GetHashKey("gr_prop_gr_doorpart_f"))
+    RequestModel(joaat("gr_prop_gr_basepart_f"))
+    RequestModel(joaat("gr_prop_gr_doorpart_f"))
     local gg = false
     print("load bunker models")
     Notify("load bunker models")
-    while not HasModelLoaded(GetHashKey("gr_prop_gr_basepart_f")) and not HasModelLoaded(GetHashKey("gr_prop_gr_doorpart_f")) do
+    while not HasModelLoaded(joaat("gr_prop_gr_basepart_f")) and not HasModelLoaded(joaat("gr_prop_gr_doorpart_f")) do
        if not gg then 
         print("load bunker models - WAIT")
         Notify("load bunker models - WAIT")
@@ -510,7 +512,7 @@ function activateUpgradeSet()
     ActivateInteriorEntitySet(258561, "Gun_schematic_set")
     ActivateInteriorEntitySet(258561, "Office_Upgrade_set")-- adds room with bed
     RefreshInterior(258561)
-    local officeChairOBJ = CreateObjectNoOffset(GetHashKey(OfficeChar), 908.370, -3206.994, -96.187, true, true, false)
+    local officeChairOBJ = CreateObjectNoOffset(joaat(OfficeChar), 908.370, -3206.994, -96.187, true, true, false)
     ForceRoomForEntity(officeChairOBJ, 258561, -995755633)
     PlaceObjectOnGroundProperly(officeChairOBJ)
     Wait(0.1)
@@ -587,7 +589,7 @@ function CutsceneCheck()
                 --DeleteEntity(Crate_03)
                 DeleteEntity(Crate_04)
                 --DeleteEntity(Crate_05)
-                RemoveModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), false)
+                RemoveModelHide(897.0294, -3248.4165, -99.29, 5.0, joaat("gr_prop_gr_tunnel_gate"), false)
                 SetUpDisruptionLogisticsLaptop()
         end
 end
