@@ -1,6 +1,8 @@
 fx_version 'cerulean'
 game 'gta5'
 
+lua54 'yes'
+
 author 'davedumas0 with help from GPT'
 description 'Resource for loading bunker IPLs and blips'
 version '1.0.0'
