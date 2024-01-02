@@ -2,35 +2,69 @@
 
 
 
--- Initialization of constants and variables
--- Models and coordinates for various game objects and locations are defined here.
-local bunkerClosedDoorObjectModel = GetHashKey("gr_prop_gr_bunkeddoor_f")
-local bunkerDoorTopModel = GetHashKey("gr_prop_gr_doorpart_f")
-local bunkerDoorBottomModel = GetHashKey("gr_prop_gr_basepart_f")
-local bunkerInteriorCoords = vector3(885.982, -3245.716, -98.278)
+-- Bunker Specific Configuration and State
+local ownsBunker = true  -- Determines if the player owns a bunker.
+local ownedBunkerNumber = 1  -- Identifier for the specific bunker owned by the player.
+local firstRun = true  -- Flag to check if this is the first execution of the script for the player.
+local isBunkerBusinessSetUP = false  -- Checks if the bunker's business setup is complete.
+
+-- Bunker Upgrades and Customization
+local securityUpgrade = false  -- Indicates whether the bunker has a security upgrade.
+local bunkerStyle = {"Bunker_Style_A", "Bunker_Style_B", "Bunker_Style_C"}  -- Array of available bunker styles for customization.
+local officeRoomUpgrade = true  -- Determines whether the office room in the bunker is upgraded.
+local gunlockerUppgrade = true  -- States if the bunker has an upgraded gun locker.
+local transportUpgrade = false  -- Identifies if the bunker has received a transport upgrade.
+local staffUpgrade = false  -- Indicates whether the bunker has a staff upgrade.
+local gunRangeUpgrade = true  -- Indicates if the bunker has a gun range upgrade.
+local ownsMOC = false  -- Checks if the player owns a Mobile Operations Center.
+local isSittingInBossChair = false
 
 
--- these variables are supposed to control the entire script and should be set with a server DB query
-local ownsBunker = true
-local ownedBunkerNumber = 1
-local firstRun = false
-IsInCutscene = false
-local securityUpgrade = false
-local bunkerStyle = {"Bunker_Style_A", "Bunker_Style_B", "Bunker_Style_C"}
-local ownsMOC = false
-local gunRangeUpgrade = false
-local officeRoomUpgrade = true
-local gunlockerUppgrade = true
-local officeChair = 2
-local transportUpgrade = false
-local staffUpgrade = false
-local isBunkerBusinessSetUP = false
-local bunkerBusinessLaptop = "gr_bunker_laptop_01a"
-local disruptionLogisticsScreen = "Prop_Screen_GR_Disruption"
+
+-- Bunker Interior and Equipment
+local officeChair = 2  -- Specifies the type/model of the office chair inside the bunker.
+local bunkerBusinessLaptop = "gr_bunker_laptop_01a"  -- Model identifier for the bunker's business laptop.
+local disruptionLogisticsScreen = "Prop_Screen_GR_Disruption"  -- Model identifier for the disruption logistics screen.
+local bunkerInterior = 258561
+
+-- Bunker Manufacturing and Research
+local researchActive = false  -- Indicates if research activities are currently underway in the bunker.
+local manufacturingActive = false  -- Determines if the bunker is engaged in manufacturing.
+local researchAndManufacturingActive = false  -- Checks if both research and manufacturing activities are active simultaneously.
+local manufacturedProduct = "Gun_barrel_handgun_01"  -- Placeholder for the type of product being manufactured.
+
+-- Bunker Inventory and Stock Management
+local materialStockLevel = 0.0  -- The current level of materials stocked in the bunker.
+local productStockLevel = 0.0  -- The current level of products stocked in the bunker.
+
+-- Bunker Vehicle Management
+local bunkerExtraVehicleSlots = 1  -- Number of extra vehicle slots in the bunker.
+local vehicleInSlot = ""  -- Keeps track of the vehicle currently placed in the extra slot.
+
+-- Security and Raid Management
+local raidChanceMultiplier = 0  -- Affects the likelihood of a raid on the bunker.
+local policeInformant = false -- Reduces chance of a raid and provides advanced notice.
+
+-- Bunker Financial Management
+local upkeepBasePrice = 1000  -- Base price for bunker maintenance.
+local upkeepCostMultiplier = 0 -- Multiplier for upkeep cost (0 is free, 1 is base price, 2 is 2X base price, etc.)
+
+-- Special Contracts and Engagements
+local hasGovernmentContract = false -- Engages bunker in government contracts for manufacturing.
+
+-- Bunker Emergency Situations
+local isRaidInProgress = false  -- Indicates if a raid on the bunker is currently in progress.
+
+-- Cutscene and Animation Management
+IsInCutscene = false  -- Flag to indicate if a cutscene is currently playing.
+
+-- Bunker Models and Coordinates
+local bunkerClosedDoorObjectModel = GetHashKey("gr_prop_gr_bunkeddoor_f")  -- Hash key for the bunker's closed door model.
+local bunkerDoorTopModel = GetHashKey("gr_prop_gr_doorpart_f")  -- Hash key for the top part of the bunker door model.
+local bunkerDoorBottomModel = GetHashKey("gr_prop_gr_basepart_f")  -- Hash key for the bottom part of the bunker door model.
+local bunkerInteriorCoords = vector3(885.982, -3245.716, -98.278)  -- Vector3 coordinates for the bunker interior.
+
 local disruptScreen = false
-
-
-
 
 -- Function to load the IPLs for bunkers in the game.
 -- IPLs are used to load interior and exterior building models and props.
@@ -118,6 +152,18 @@ function CreateBunkerBlips()
         
     end
     print("create bunker blips")
+end
+
+
+
+
+
+
+Scaleform = RequestScaleformMovie("DISRUPTION_LOGISTICS")
+Flag = false
+
+while not HasScaleformMovieLoaded(Scaleform) do
+   Wait(0.0)
 end
 
 -- Function to control the rotation and animation of the bunker door top part.
@@ -231,15 +277,34 @@ function OpenDoor(doorTop, doorBottom)
         local doorCoords = GetEntityCoords(door)
             RotateTopEntity(doorTop, topRot, bunkerCam_01)
         if IsPedInVehicle(PlayerPedId(), GetVehiclePedIsIn(PlayerPedId(), false), false) then
-            
-            Wait(500)
+            DoScreenFadeOut(1500)
+            Wait(1500)
             ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
+            SetCamActive(bunkerCam_01, false)
+            RenderScriptCams(false, false, 600, true, false)
+            DestroyCam(bunkerCam_01, true)
             SetEntityCoords(GetVehiclePedIsIn(PlayerPedId(), false), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
+            SetUpDisruptionLogisticsLaptop()
+            Wait(100)
+            SetUpDisruptionLogisticsLaptop()
+            print("triggered")
+            DisAbleControlActionSet()
+            DoScreenFadeIn(1500)
+            
         else
             TaskGoStraightToCoord(PlayerPedId(), doorCoords.x, doorCoords.y, doorCoords.z, 1.0, 8000, 88.617, 0.0)
             Wait(500)
             if not firstRun then
-                RequestCutsceneWithPlaybackList("BUNK_INT", 501, 8)
+                if gunRangeUpgrade and ownsMOC then
+                    RequestCutsceneWithPlaybackList("BUNK_INT", 491, 8)
+                elseif gunRangeUpgrade and not ownsMOC then
+                    RequestCutsceneWithPlaybackList("BUNK_INT", 493, 8)
+                elseif ownsMOC and not gunRangeUpgrade then
+                    RequestCutsceneWithPlaybackList("BUNK_INT", 499, 8)
+                
+                else
+                    RequestCutsceneWithPlaybackList("BUNK_INT", 501, 8)
+                end
                 while not HasCutsceneLoaded() do
                    Wait(0.0)
                 end
@@ -247,7 +312,11 @@ function OpenDoor(doorTop, doorBottom)
                 Wait(1500)
                 ResetBunkerDoor(GetBunkerCloseToPlayer(), DoorTop, DoorBottom)
                 SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
-                
+                SetUpDisruptionLogisticsLaptop()
+                Wait(100)
+                SetUpDisruptionLogisticsLaptop()
+                DisAbleControlActionSet()
+                DoScreenFadeIn(1500)
             else
                 DoScreenFadeOut(1500)
                 Wait(1500)
@@ -257,7 +326,13 @@ function OpenDoor(doorTop, doorBottom)
                 DestroyCam(bunkerCam_01, true)
                 SetEntityCoords(PlayerPedId(), bunkerInteriorCoords.x, bunkerInteriorCoords.y, bunkerInteriorCoords.z, true, false, false, false)
                 SetUpDisruptionLogisticsLaptop()
+                Wait(100)
+                SetUpDisruptionLogisticsLaptop()
+                print("triggered")
+                DisAbleControlActionSet()
                 DoScreenFadeIn(1500)
+                
+                
             end
 
         
@@ -272,9 +347,12 @@ function OpenDoor(doorTop, doorBottom)
                 RegisterEntityForCutscene(GetPlayerPed(-1), "MP_1", 0, GetEntityModel(GetPlayerPed(-1)), 64)
                 Wait(2000)
                 DoScreenFadeIn(1000)
+                print("cutScene started")
+                
                 StartCutscene(0)
                 IsInCutscene = true
                 firstRun = true
+
             end
 
         end
@@ -284,38 +362,6 @@ function OpenDoor(doorTop, doorBottom)
     end
 end
 
--- Function to animate the closing of the bunker door and turn off the camera
-function CloseDoor(doorTop, doorBottom, bunkerCam)
-    if doorTop and doorBottom then
-        local topRot = GetEntityRotation(doorTop, 2)
-        
-        -- If a camera is provided, activate and render it
-        if bunkerCam then
-            SetCamActive(bunkerCam, true)
-            RenderScriptCams(true, false, 600, true, false)
-        end
-
-        -- Rotate the top part of the door to close it
-        for i = 1, 20 do
-            Wait(120)
-            SetEntityRotation(doorTop, topRot.x, topRot.y - 20 + i, topRot.z, 2, true)
-
-            -- Play sound effects or trigger other events as needed
-        end
-
-        -- Turn off the camera after the door closes
-        if bunkerCam then
-            RenderScriptCams(false, true, 1000, true, false)
-            DestroyCam(bunkerCam, false)
-        end
-
-        -- Notify the player or trigger other in-game events
-        Notify("Bunker door closed.")
-
-    else
-        Notify("Door parts are missing.")
-    end
-end
 
 
 function LoadBunkerModels()
@@ -491,48 +537,57 @@ end
 
 
 function activateSecuritySet()
-    ActivateInteriorEntitySet(258561, "standard_security_set")
-    DeactivateInteriorEntitySet(258561, "security_upgrade")
+    ActivateInteriorEntitySet(bunkerInterior, "standard_security_set")
+    DeactivateInteriorEntitySet(bunkerInterior, "security_upgrade")
 end
 
 function activateUpgradeSet()
     if officeChair ==1 then
-        OfficeChar = "bkr_prop_clubhouse_offchair_01a"
+        OfficeChairModel = "bkr_prop_clubhouse_offchair_01a"
     elseif officeChair ==2 then
-        OfficeChar = "sm_prop_smug_offchair_01a"
+        OfficeChairModel = "sm_prop_smug_offchair_01a"
     end
-    RequestModel(OfficeChar)
-    while not HasModelLoaded(OfficeChar) do
+    RequestModel(OfficeChairModel)
+    while not HasModelLoaded(OfficeChairModel) do
         Wait(0)
     end
-    ActivateInteriorEntitySet(258561, "upgrade_bunker_set") --new machines
-    DeactivateInteriorEntitySet(258561, "standard_bunker_set") --used machines
-    ActivateInteriorEntitySet(258561, "Gun_schematic_set")
-    ActivateInteriorEntitySet(258561, "Office_Upgrade_set")-- adds room with bed
-    RefreshInterior(258561)
-    local officeChairOBJ = CreateObjectNoOffset(GetHashKey(OfficeChar), 908.370, -3206.994, -96.187, true, true, false)
-    ForceRoomForEntity(officeChairOBJ, 258561, -995755633)
-    PlaceObjectOnGroundProperly(officeChairOBJ)
+    DoesofficeChairExist = DoesObjectOfTypeExistAtCoords(908.670, -3206.994, -97.500, 1, GetHashKey(OfficeChairModel), true)
+
+    ActivateInteriorEntitySet(bunkerInterior, "standard_bunker_set") --used machines
+    ActivateInteriorEntitySet(bunkerInterior, "Gun_schematic_set")
+    ActivateInteriorEntitySet(bunkerInterior, "Office_Upgrade_set")-- adds room with bed
+    RefreshInterior(bunkerInterior)
+    if DoesofficeChairExist then
+      local oldChair = GetClosestObjectOfType(908.670, -3206.994, -97.500, 1, GetHashKey(OfficeChairModel), false, false, false)
+      DeleteEntity(oldChair)
+    end
+    if not DoesEntityExist(OfficeChairOBJ) then
+    OfficeChairOBJ = CreateObjectNoOffset(GetHashKey(OfficeChairModel), 908.670, -3206.994, -97.500, true, true, false)
+    local rot = GetEntityRotation(OfficeChairOBJ, 2)
+    SetEntityRotation(OfficeChairOBJ, rot.x, rot.y, rot.z+10.022, 2, false)
+    ForceRoomForEntity(OfficeChairOBJ, bunkerInterior, -995755633)
+    PlaceObjectOnGroundProperly(OfficeChairOBJ)
     Wait(0.1)
-    FreezeEntityPosition(officeChairOBJ, true)
-    --SetObjectAsNoLongerNeeded(officeChairOBJ)
-    
+    FreezeEntityPosition(OfficeChairOBJ, true)
+
+    --SetObjectAsNoLongerNeeded(OfficeChairOBJ)
+    end    
 end
 
 function ActivateStyleA()
-    ActivateInteriorEntitySet(258561, bunkerStyle[1])
-    DeactivateInteriorEntitySet(258561, bunkerStyle[2])
-    DeactivateInteriorEntitySet(258561, bunkerStyle[3]) 
+    ActivateInteriorEntitySet(bunkerInterior, bunkerStyle[1])
+    DeactivateInteriorEntitySet(bunkerInterior, bunkerStyle[2])
+    DeactivateInteriorEntitySet(bunkerInterior, bunkerStyle[3]) 
 end
 function ActivateStyleB()
-    ActivateInteriorEntitySet(258561, bunkerStyle[2])
-    DeactivateInteriorEntitySet(258561, bunkerStyle[1])
-    DeactivateInteriorEntitySet(258561, bunkerStyle[3]) 
+    ActivateInteriorEntitySet(bunkerInterior, bunkerStyle[2])
+    DeactivateInteriorEntitySet(bunkerInterior, bunkerStyle[1])
+    DeactivateInteriorEntitySet(bunkerInterior, bunkerStyle[3]) 
 end
 function ActivateStyleC()
-    ActivateInteriorEntitySet(258561, bunkerStyle[3])
-    DeactivateInteriorEntitySet(258561, bunkerStyle[1])
-    DeactivateInteriorEntitySet(258561, bunkerStyle[2]) 
+    ActivateInteriorEntitySet(bunkerInterior, bunkerStyle[3])
+    DeactivateInteriorEntitySet(bunkerInterior, bunkerStyle[1])
+    DeactivateInteriorEntitySet(bunkerInterior, bunkerStyle[2]) 
 end
 
 function Create_GR_crate(crateName, posx, posy, posz)
@@ -589,6 +644,8 @@ function CutsceneCheck()
                 --DeleteEntity(Crate_05)
                 RemoveModelHide(897.0294, -3248.4165, -99.29, 5.0, GetHashKey("gr_prop_gr_tunnel_gate"), false)
                 SetUpDisruptionLogisticsLaptop()
+                SetUpDisruptionLogisticsLaptop()
+                
         end
 end
 
@@ -598,37 +655,46 @@ function SetUpDisruptionLogisticsLaptop()
     local playerPed = GetPlayerPed(PlayerId())
     
     -- Check if the player is inside the bunker and if the laptop screen is not already set.
-    if GetInteriorFromEntity(playerPed) == 258561 and disruptScreen == false then
+    if GetInteriorFromEntity(playerPed) == bunkerInterior and disruptScreen == false then
+        print("GetInteriorFromEntity(playerPed) == bunkerInterior "..tostring(GetInteriorFromEntity(playerPed) == bunkerInterior))
         -- Request the texture for the laptop screen.
-        RequestStreamedTextureDict("Prop_Screen_GR_Disruption", 0)
-        
+        RequestStreamedTextureDict(disruptionLogisticsScreen, 0)
+        while not HasStreamedTextureDictLoaded(disruptionLogisticsScreen) do
+            Wait(0.0)
+        end
         -- If the texture is loaded, proceed with setting up the screen.
-        if HasStreamedTextureDictLoaded("Prop_Screen_GR_Disruption") then
+        if HasStreamedTextureDictLoaded(disruptionLogisticsScreen) then
             -- Register a render target (screen) if it's not already registered.
-            if not IsNamedRendertargetRegistered("gr_bunker_laptop_01a") then
-                RegisterNamedRendertarget("gr_bunker_laptop_01a", 0)
+            while not IsNamedRendertargetRegistered(bunkerBusinessLaptop) do
+                RegisterNamedRendertarget(bunkerBusinessLaptop, false)
+                Wait(0.0)
             end
             -- Link the laptop's screen to the render target if not already linked.
-            if not IsNamedRendertargetLinked(-424277613) then
+            if not IsNamedRendertargetLinked(-424277613) and IsNamedRendertargetRegistered(bunkerBusinessLaptop) then
                 LinkNamedRendertarget(-424277613)
+                Wait(0.0)
+            elseif IsNamedRendertargetLinked(-424277613) then
                 disruptScreen = true -- Indicate that the laptop screen is now set up.
             end
         end
     end
 
     -- Print whether the render target is linked (for debugging).
-    print(tostring(IsNamedRendertargetLinked(-424277613)))
+    
+    print("disruptScreen:"..tostring(disruptScreen))
+    print("IsNamedRendertargetLinked "..tostring(IsNamedRendertargetLinked(-424277613)))
+    print("GetInteriorFromEntity(playerPed) == bunkerInterior "..tostring(GetInteriorFromEntity(playerPed) == bunkerInterior))
 end
 
 -- Draws the Disruption Logistics screen on the laptop in the bunker.
 function DrawDisruptLogistics()
     -- Retrieve the player's character.
     local playerPed = GetPlayerPed(PlayerId())
-    
+
     -- Check if the player is inside the bunker and if the laptop screen is set up.
-    if GetInteriorFromEntity(playerPed) == 258561 and disruptScreen == true then
+    if GetInteriorFromEntity(playerPed) == bunkerInterior and IsNamedRendertargetLinked(-424277613) then
         -- Get the render target ID for the laptop.
-        local bunkerLaptopRenderTargetId = GetNamedRendertargetRenderId("gr_bunker_laptop_01a")
+        local bunkerLaptopRenderTargetId = GetNamedRendertargetRenderId(bunkerBusinessLaptop)
         
         -- Set the current render target to the laptop screen for drawing.
         SetTextRenderId(bunkerLaptopRenderTargetId)
@@ -637,11 +703,196 @@ function DrawDisruptLogistics()
         SetScriptGfxDrawOrder(4)
         SetScriptGfxDrawBehindPausemenu(true)
         -- Draw the Disruption Logistics screen on the laptop.
-        DrawSprite("Prop_Screen_GR_Disruption", "Prop_Screen_GR_Disruption", 0.5, 0.5, 1.0, 1.0, 0.0, 255, 255, 255, 255)
+        DrawSprite(disruptionLogisticsScreen, disruptionLogisticsScreen, 0.5, 0.5, 1.0, 1.0, 0.0, 255, 255, 255, 255)
         -- Reset the render target to default after drawing.
         ScreenDrawPositionEnd()
         SetTextRenderId(GetDefaultScriptRendertargetRenderId())
     end
+end
+
+
+function DisAbleControlActionSet()
+    DisableControlAction(0, 37, true) --*INPUT_SELECT_WEAPON*
+    DisableControlAction(0, 157, true) --*INPUT_SELECT_WEAPON_UNARMED*
+    DisableControlAction(0, 22, true) --*INPUT_JUMP*
+    DisableControlAction(0, 159, true) --*INPUT_SELECT_WEAPON_HANDGUN*
+    DisableControlAction(0, 160, true) --*INPUT_SELECT_WEAPON_SHOTGUN*
+    DisableControlAction(0, 161, true) --*INPUT_SELECT_WEAPON_SMG*
+    DisableControlAction(0, 162, true) --*INPUT_SELECT_WEAPON_AUTO_RIFLE*
+    DisableControlAction(0, 163, true) --*INPUT_SELECT_WEAPON_SNIPER*
+    DisableControlAction(0, 164, true) --*INPUT_SELECT_WEAPON_HEAVY*
+    DisableControlAction(0, 165, true) --*INPUT_SELECT_WEAPON_SPECIAL*
+    DisableControlAction(0, 158, true) --*INPUT_SELECT_WEAPON_MELEE*
+    DisableControlAction(0, 24, true) --*INPUT_ATTACK*
+
+
+end
+
+function IsPlayerPlayingLaptopAnim(playerId)
+    local ped = GetPlayerPed(playerId)
+
+    if DoesEntityExist(ped) and not IsPedInjured(ped) then
+        if IsEntityPlayingAnim(ped, AnimationDictToTest, "enter", 3) or
+           IsEntityPlayingAnim(ped, AnimationDictToTest, "idle_a", 3) or
+           IsEntityPlayingAnim(ped, AnimationDictToTest, "idle_b", 3) or
+           IsEntityPlayingAnim(ped, AnimationDictToTest, "idle_c", 3) or
+           IsEntityPlayingAnim(ped, AnimationDictToTest, "idle_d", 3) or
+           IsEntityPlayingAnim(ped, AnimationDictToTest, "exit", 3) then
+            return true
+        else
+            return false
+        end
+    end
+
+end
+
+
+
+function IsPlayerInBunkerDeskSeatLocate(bPrint)
+    -- bPrint defaults to true if not provided
+    bPrint = bPrint or true
+
+    local playerPed = PlayerPedId()
+
+    if IsPedRunning(playerPed) then
+        return false, nil
+    end
+
+    local enteredFromRight = false
+
+    if IsEntityInAngledArea(playerPed, 907.294678, -3206.696045, -98.187889, 908.211975, -3207.899170, -96.437889, 1.3125, false, true, 0) then
+        if bPrint then
+            --print("[PROPERTY_SEAT] IS_LOCAL_PLAYER_IN_BUNKER_DESK_SEAT_LOCATE: Player is in boss seat, entered from the right")
+        end
+        enteredFromRight = true
+        return true, enteredFromRight
+    elseif IsEntityInAngledArea(playerPed, 909.094727, -3205.729492, -98.188049, 909.589966, -3207.126221, -96.438103, 1.0, false, true, 0) then
+        if bPrint then
+            --print("[PROPERTY_SEAT] IS_LOCAL_PLAYER_IN_BUNKER_DESK_SEAT_LOCATE: Player is in boss seat, entered from the left")
+        end
+        enteredFromRight = false
+        return true, enteredFromRight
+    end
+
+    return false, enteredFromRight
+end
+
+function ShowOverlay(sMessage, sAcceptButtonLabel, sCancelButtonLabel)
+    BeginScaleformMovieMethod(Scaleform, "SHOW_OVERLAY")
+        BeginTextCommandScaleformString(sMessage)
+        EndTextCommandScaleformString()
+        ScaleformMovieMethodAddParamIntString(sAcceptButtonLabel)
+        ScaleformMovieMethodAddParamIntString(sCancelButtonLabel)
+
+
+    EndScaleformMovieMethod()
+
+end
+
+
+
+function Things(Scaleform)   
+    if HasScaleformMovieLoaded(Scaleform) then		 
+        --Set_2dLayer(4)
+        --enableMouse()
+
+        BeginScaleformMovieMethod(Scaleform, "SET_STATS")
+            ScaleformMovieMethodAddParamIntString("playerName")
+            ScaleformMovieMethodAddParamIntString("playerOrgin")
+            ScaleformMovieMethodAddParamIntString("bunkerName")
+            ScaleformMovieMethodAddParamIntString("bunkerLocation")
+            ScaleformMovieMethodAddParamInt(0)
+            ScaleformMovieMethodAddParamInt(10)
+            ScaleformMovieMethodAddParamInt(25)
+            ScaleformMovieMethodAddParamInt(50)
+            ScaleformMovieMethodAddParamInt(34)
+            ScaleformMovieMethodAddParamInt(25000)
+            ScaleformMovieMethodAddParamInt(5)
+            ScaleformMovieMethodAddParamInt(0)
+            ScaleformMovieMethodAddParamInt(1)
+            ScaleformMovieMethodAddParamInt(0)
+            ScaleformMovieMethodAddParamInt(2000)
+            ScaleformMovieMethodAddParamInt(0)
+            ScaleformMovieMethodAddParamInt(5)
+            ScaleformMovieMethodAddParamInt(1)
+        EndScaleformMovieMethod()
+
+
+
+        
+    end
+end
+
+AnimationDictToTest = "anim@amb@clubhouse@boss@male@"
+
+function GetInDeskChair(side)
+    local done = false
+    local ChairCoords = {x = 908.670, y = -3206.994, z = -97.500} --GetEntityCoords(OfficeChairOBJ)
+    local ChairRot = GetEntityRotation(OfficeChairOBJ, 2)
+    --SetEntityCoords(OfficeChairOBJ, ChairCoords.x)
+
+                RequestAnimDict(AnimationDictToTest)
+                if not HasAnimDictLoaded(AnimationDictToTest) then
+                    Wait(0.0)
+                end
+
+    if side == 0 or side == nil then
+    SittScene = NetworkCreateSynchronisedScene(ChairCoords.x, ChairCoords.y, ChairCoords.z, ChairRot.x, ChairRot.y, ChairRot.z, 2, true, false, 1.0, 0.0, 1.0)
+                NetworkAddPedToSynchronisedScene(PlayerPedId(), SittScene, AnimationDictToTest, "enter", 4.0, -1.5, 5, 16, 1000.0, 4)
+                NetworkAddEntityToSynchronisedScene(OfficeChairOBJ, SittScene, AnimationDictToTest, "enter_chair", 4.0, 4.0, 32773)
+                NetworkStartSynchronisedScene(SittScene)
+                Wait(5100)
+                isSittingInBossChair = true
+                --NetworkStopSynchronisedScene(SittScene)
+                --print("isSittingInBossChair " ..tostring(isSittingInBossChair))
+                --print("IsPlayerPlayingLaptopAnim(playerId)"..tostring(IsPlayerPlayingLaptopAnim(PlayerId())))
+                print("IsEntityPlayingAnim(PlayerPedId(), AnimationDictToTest, enter, 3)"..tostring(IsEntityPlayingAnim(PlayerPedId(), AnimationDictToTest, "enter", 3)))
+                --PlayEntityAnim(playerPed, "idle_a",AnimationDictToTest, 3, true, false, true, 1, 0)
+                done = true
+    elseif side == 1 then
+    SittScene = NetworkCreateSynchronisedScene(ChairCoords.x, ChairCoords.y, ChairCoords.z, ChairRot.x, ChairRot.y, ChairRot.z, 2, true, false, 1.0, 0.0, 1.0)
+                NetworkAddPedToSynchronisedScene(PlayerPedId(), SittScene, AnimationDictToTest, "enter_LEFT", 4.0, -1.5, 5, 16, 1000.0, 4)
+                NetworkAddEntityToSynchronisedScene(OfficeChairOBJ, SittScene, AnimationDictToTest, "enter_chair", 4.0, 4.0, 32773)
+                NetworkStartSynchronisedScene(SittScene)
+                Wait(5100)
+                isSittingInBossChair = true
+                --print("isSittingInBossChair " ..tostring(isSittingInBossChair))
+                print("IsEntityPlayingAnim(PlayerPedId(), AnimationDictToTest, computer_idle, 3)"..tostring(IsEntityPlayingAnim(PlayerPedId(), AnimationDictToTest, "computer_idle", 3)))
+                done = true
+    
+    end
+    if isSittingInBossChair and done then
+        SittScene = NetworkCreateSynchronisedScene(ChairCoords.x, ChairCoords.y, ChairCoords.z, ChairRot.x, ChairRot.y, ChairRot.z, 2, true, false, 1.0, 0.0, 1.0)
+                NetworkAddPedToSynchronisedScene(PlayerPedId(), SittScene, AnimationDictToTest, "computer_idle", 4.0, -1.5, 5, 16, 1000.0, 4)
+                NetworkAddEntityToSynchronisedScene(OfficeChairOBJ, SittScene, AnimationDictToTest, "COMPUTER_IDLE_CHAIR", 4.0, 4.0, 32773)
+                NetworkStartSynchronisedScene(SittScene)
+                
+    end
+
+end
+
+function GetOutDeskChair()
+    local done = false
+    local ChairCoords = {x = 908.670, y = -3206.994, z = -97.500} --GetEntityCoords(OfficeChairOBJ)
+    local ChairRot = GetEntityRotation(OfficeChairOBJ, 2)
+                RequestAnimDict(AnimationDictToTest)
+                RequestAnimDict("anim@amb@warehouse@laptop@")
+                
+                if not HasAnimDictLoaded(AnimationDictToTest) then
+                    Wait(0.0)
+                end
+    if isSittingInBossChair then
+    SittScene = NetworkCreateSynchronisedScene(ChairCoords.x, ChairCoords.y, ChairCoords.z, ChairRot.x, ChairRot.y, ChairRot.z, 2, true, false, 1.0, 0.0, 1.0)
+                NetworkAddPedToSynchronisedScene(PlayerPedId(), SittScene, AnimationDictToTest, "exit", 4.0, -4.0, 5, 0, 1000.0, 0)
+                NetworkAddEntityToSynchronisedScene(OfficeChairOBJ, SittScene, AnimationDictToTest, "exit_chair", 4.0, 4.0, 32773)
+                NetworkStartSynchronisedScene(SittScene)
+                Wait(5500)
+                isSittingInBossChair = false
+                NetworkStopSynchronisedScene(SittScene)
+                print("isSittingInBossChair " ..tostring(isSittingInBossChair))
+        return done
+    end
+
 end
 
 
@@ -655,15 +906,47 @@ Citizen.CreateThread(function()
     activateSecuritySet()
      
     LoadBunkerModels()
+    Things(Scaleform)
+    
 
-     
+
+
+
+
     while true do
+        if Flag then
+            
+            DrawScaleformMovieFullscreen(Scaleform, 255, 255, 255, 255, 0)
+            ShowOverlay("DL_BUS_EMPTY", "OR_OVRLY_OK", "")
+          
+        end
+
+        local playerPed = GetPlayerPed(PlayerId())
         DrawBunkerEntranceMarkers ()
         CutsceneCheck()
-        --SetUpDisruptionLogisticsLaptop ()
-        DrawDisruptLogistics()
+        
         Wait(0.0)
+        if GetInteriorFromEntity(playerPed) == bunkerInterior then
+            
+            if IsPlayerInBunkerDeskSeatLocate() and IsControlJustPressed(0, 38) then
+               
 
+                
+                GetInDeskChair()
+                Wait(3000)
+                print("IsPlayerPlayingLaptopAnim(playerId)"..tostring(IsPlayerPlayingLaptopAnim(PlayerId())))
+                print("isSittingInBossChair " ..tostring(isSittingInBossChair))
+            end
+            if isSittingInBossChair and IsControlJustPressed(0, 25) then
+
+                GetOutDeskChair()
+                
+            end
+
+            DisAbleControlActionSet()
+            DrawDisruptLogistics()
+        end
+        
     end
     
 end)
